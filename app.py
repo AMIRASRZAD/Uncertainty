@@ -2,24 +2,34 @@ from flask import Flask, render_template, request, redirect, url_for, session
 import pandas as pd
 import numpy as np
 import os
+import psycopg2
+from psycopg2 import pool
 
 app = Flask(__name__)
-app.secret_key = '1234'  # Replace with a secure key
+app.secret_key = os.environ.get('SECRET_KEY', '1234')
 
-# Load CSV from a URL (Google Drive raw link)
+# Supabase DB connection pool
+db_pool = psycopg2.pool.SimpleConnectionPool(
+    1, 20,
+    host=os.environ.get('DB_HOST', 'db.lyqtayprcpyfjhdmlluk.supabase.co'),
+    port=os.environ.get('DB_PORT', 5432),
+    database=os.environ.get('DB_NAME', 'postgres'),
+    user=os.environ.get('DB_USER', 'postgres'),
+    password=os.environ.get('DB_PASSWORD', 'DhAaQV4tM$K!!gr')
+)
+
 CSV_URL = "https://drive.google.com/uc?id=1EV4AoEymcBA3FEFgce2-Dq9cBSXu4rIu"
 df = pd.read_csv(CSV_URL)
-
-# Convert all int64 columns to native Python int at dataframe level
 for col in df.columns:
     if df[col].dtype == 'int64':
         df[col] = df[col].astype(int)
+        
 
 # Define average values
 AVERAGES = {
-    "RevolvingUtilizationOfUnsecuredLines": "25%",
+    "RevolvingUtilizationOfUnsecuredLines": .25,
     "NumberOfTime30-59DaysPastDueNotWorse": 0.1,
-    "DebtRatio": "20%",
+    "DebtRatio": .20,
     "MonthlyIncome": 3000
 }
 
@@ -93,9 +103,36 @@ def task():
     
     task_index = session['task_index']
     if task_index >= len(session['tasks']):
-        responses_df = pd.DataFrame(session['responses'])
-        responses_df.to_csv('responses.csv', mode='a', header=not os.path.exists('responses.csv'), index=False)
+        conn = db_pool.getconn()
+        try:
+            with conn.cursor() as cur:
+                for response in session['responses']:
+                    task_data = next(t for t in session['tasks'] if t['ID'] == response['ID'])
+                    # Convert percentage strings to floats
+                    revolving_util = float(task_data['RevolvingUtilizationOfUnsecuredLines'].replace('%', '')) / 100 if isinstance(task_data['RevolvingUtilizationOfUnsecuredLines'], str) and '%' in task_data['RevolvingUtilizationOfUnsecuredLines'] else float(task_data['RevolvingUtilizationOfUnsecuredLines'])
+                    debt_ratio = float(task_data['DebtRatio'].replace('%', '')) / 100 if isinstance(task_data['DebtRatio'], str) and '%' in task_data['DebtRatio'] else float(task_data['DebtRatio'])
+                    monthly_income = float(task_data['MonthlyIncome'].replace('$', '').replace(',', '')) if isinstance(task_data['MonthlyIncome'], str) else float(task_data['MonthlyIncome'])
+                    cur.execute(
+                        "INSERT INTO responses (participant_id, condition, initial_decision, final_decision, predicted, confidence_score, level, "
+                        "revolving_utilization, late_payments_30_59, debt_ratio, monthly_income) "
+                        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                        (response['ID'], response['Condition'], response['Initial_Decision'], 
+                         response['Final_Decision'], response['Predicted'], response['Confidence_Score'], 
+                         response['Level'], revolving_util, 
+                         task_data['NumberOfTime30-59DaysPastDueNotWorse'], debt_ratio, 
+                         monthly_income)
+                    )
+                conn.commit()
+                print("Data committed to Supabase")
+        except Exception as e:
+            print(f"Database error: {e}")
+            conn.rollback()
+        finally:
+            db_pool.putconn(conn)
         return render_template('end.html')
+    
+    
+    
     
     task_data = session['tasks'][task_index]
     condition = session['condition']
@@ -122,6 +159,7 @@ def task():
         "MonthlyIncome": task_data["MonthlyIncome"]
     }
     return render_template('stage1.html', customer_info=customer_info, averages=AVERAGES)
+
 
 @app.route('/stage2', methods=['POST'])
 def stage2():
@@ -158,5 +196,5 @@ def stage2():
                               initial_decision=initial_decision)
 
 if __name__ == '__main__':
-    #app.run(debug=True)
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+    app.run(debug=True)
+    #app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
