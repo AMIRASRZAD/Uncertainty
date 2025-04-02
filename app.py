@@ -194,7 +194,21 @@ def stage2():
                               confidence_score=task_data['Confidence_Score'], 
                               graph_url=graph_url, 
                               initial_decision=initial_decision)
+"""
+@app.route('/test-db')
+def test_db():
+    conn = db_pool.getconn()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT NOW();")
+            result = cur.fetchone()
+            return f"Database time: {result[0]}"
+    except Exception as e:
+        return f"Connection failed: {e}"
+    finally:
+        db_pool.putconn(conn)
 
+"""
 if __name__ == '__main__':
-    app.run(debug=True)
-    #app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+    #app.run(debug=True)
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
