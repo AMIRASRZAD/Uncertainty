@@ -8,27 +8,11 @@ from psycopg2 import pool
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', '1234')
 
-try:
-    db_pool = psycopg2.pool.SimpleConnectionPool(
-        1, 20,
-        host=os.environ.get('DB_HOST', 'db.lyqtayprcpyfjhdmlluk.supabase.co'),
-        port=os.environ.get('DB_PORT', 5432),
-        database=os.environ.get('DB_NAME', 'postgres'),
-        user=os.environ.get('DB_USER', 'postgres'),
-        password=os.environ.get('DB_PASSWORD', 'DhAaQV4tM$K!!gr')
-    )
-    print("Database pool initialized successfully")
-except Exception as e:
-    print(f"Failed to initialize database pool: {e}")
-    raise  # Crash the app to log the error
-
-
 CSV_URL = "https://drive.google.com/uc?id=1EV4AoEymcBA3FEFgce2-Dq9cBSXu4rIu"
 df = pd.read_csv(CSV_URL)
 for col in df.columns:
     if df[col].dtype == 'int64':
-        df[col] = df[col].astype(int)
-        
+        df[col] = df[col].astype(int)      
 
 # Define average values
 AVERAGES = {
@@ -108,37 +92,37 @@ def task():
     
     task_index = session['task_index']
     if task_index >= len(session['tasks']):
-        conn = db_pool.getconn()
-        try:
-            with conn.cursor() as cur:
-                for response in session['responses']:
-                    task_data = next(t for t in session['tasks'] if t['ID'] == response['ID'])
-                    # Convert percentage strings to floats
-                    revolving_util = float(task_data['RevolvingUtilizationOfUnsecuredLines'].replace('%', '')) / 100 if isinstance(task_data['RevolvingUtilizationOfUnsecuredLines'], str) and '%' in task_data['RevolvingUtilizationOfUnsecuredLines'] else float(task_data['RevolvingUtilizationOfUnsecuredLines'])
-                    debt_ratio = float(task_data['DebtRatio'].replace('%', '')) / 100 if isinstance(task_data['DebtRatio'], str) and '%' in task_data['DebtRatio'] else float(task_data['DebtRatio'])
-                    monthly_income = float(task_data['MonthlyIncome'].replace('$', '').replace(',', '')) if isinstance(task_data['MonthlyIncome'], str) else float(task_data['MonthlyIncome'])
-                    cur.execute(
-                        "INSERT INTO responses (participant_id, condition, initial_decision, final_decision, predicted, confidence_score, level, "
-                        "revolving_utilization, late_payments_30_59, debt_ratio, monthly_income) "
-                        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
-                        (response['ID'], response['Condition'], response['Initial_Decision'], 
-                         response['Final_Decision'], response['Predicted'], response['Confidence_Score'], 
-                         response['Level'], revolving_util, 
-                         task_data['NumberOfTime30-59DaysPastDueNotWorse'], debt_ratio, 
-                         monthly_income)
-                    )
-                conn.commit()
-                print("Data committed to Supabase")
-        except Exception as e:
-            print(f"Database error: {e}")
-            conn.rollback()
-        finally:
-            db_pool.putconn(conn)
+        responses_df = pd.DataFrame(session['responses'])
+        responses_df.to_csv('responses.csv', mode='a', header=not os.path.exists('responses.csv'), index=False)
+        print("Responses saved to responses.csv")
         return render_template('end.html')
     
+    task_data = session['tasks'][task_index]
+    condition = session['condition']
     
+    if request.method == 'POST':
+        initial_decision = request.form['initial_decision']
+        final_decision = request.form.get('final_decision', initial_decision)
+        session['responses'].append({
+            'ID': task_data['ID'],
+            'Condition': condition,
+            'Initial_Decision': initial_decision,
+            'Final_Decision': final_decision,
+            'Predicted': task_data['Predicted'],
+            'Confidence_Score': task_data['Confidence_Score'],
+            'Level': task_data['Level']
+        })
+        session['task_index'] += 1
+        return redirect(url_for('task'))
     
-    
+    customer_info = {
+        "RevolvingUtilizationOfUnsecuredLines": task_data["RevolvingUtilizationOfUnsecuredLines"],
+        "NumberOfTime30-59DaysPastDueNotWorse": task_data["NumberOfTime30-59DaysPastDueNotWorse"],
+        "DebtRatio": task_data["DebtRatio"],
+        "MonthlyIncome": task_data["MonthlyIncome"]
+    }
+    return render_template('stage1.html', customer_info=customer_info, averages=AVERAGES)
+
     task_data = session['tasks'][task_index]
     condition = session['condition']
     
