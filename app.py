@@ -120,12 +120,47 @@ def task():
                     )
                 conn.commit()
                 print("Data committed to Neon")
+        except psycopg2.OperationalError as e:
+            print(f"Database connection error: {e}")
+            conn.close()  # Close broken connection
+            db_pool.putconn(conn, close=True)  # Mark as closed
+            return "Database error, please try again", 500
         except Exception as e:
             print(f"Database error: {e}")
             conn.rollback()
-        finally:
             db_pool.putconn(conn)
+            return "Error saving data", 500
+        finally:
+            if conn and not conn.closed:  # Only return if not closed
+                db_pool.putconn(conn)
         return render_template('end.html')
+    
+    task_data = session['tasks'][task_index]
+    condition = session['condition']
+    
+    if request.method == 'POST':
+        initial_decision = request.form['initial_decision']
+        final_decision = request.form.get('final_decision', initial_decision)
+        session['responses'].append({
+            'ID': task_data['ID'],
+            'Condition': condition,
+            'Initial_Decision': initial_decision,
+            'Final_Decision': final_decision,
+            'Predicted': task_data['Predicted'],
+            'Confidence_Score': task_data['Confidence_Score'],
+            'Level': task_data['Level']
+        })
+        session['task_index'] += 1
+        return redirect(url_for('task'))
+    
+    customer_info = {
+        "RevolvingUtilizationOfUnsecuredLines": task_data["RevolvingUtilizationOfUnsecuredLines"],
+        "NumberOfTime30-59DaysPastDueNotWorse": task_data["NumberOfTime30-59DaysPastDueNotWorse"],
+        "DebtRatio": task_data["DebtRatio"],
+        "MonthlyIncome": task_data["MonthlyIncome"]
+    }
+    return render_template('stage1.html', customer_info=customer_info, averages=AVERAGES)
+
     
     task_data = session['tasks'][task_index]
     condition = session['condition']
