@@ -8,15 +8,20 @@ from psycopg2 import pool
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', '1234')
 
-# Supabase DB connection pool
-db_pool = psycopg2.pool.SimpleConnectionPool(
-    1, 20,
-    host=os.environ.get('DB_HOST', 'db.lyqtayprcpyfjhdmlluk.supabase.co'),
-    port=os.environ.get('DB_PORT', 5432),
-    database=os.environ.get('DB_NAME', 'postgres'),
-    user=os.environ.get('DB_USER', 'postgres'),
-    password=os.environ.get('DB_PASSWORD', 'DhAaQV4tM$K!!gr')
-)
+try:
+    db_pool = psycopg2.pool.SimpleConnectionPool(
+        1, 20,
+        host=os.environ.get('DB_HOST', 'db.lyqtayprcpyfjhdmlluk.supabase.co'),
+        port=os.environ.get('DB_PORT', 5432),
+        database=os.environ.get('DB_NAME', 'postgres'),
+        user=os.environ.get('DB_USER', 'postgres'),
+        password=os.environ.get('DB_PASSWORD', 'DhAaQV4tM$K!!gr')
+    )
+    print("Database pool initialized successfully")
+except Exception as e:
+    print(f"Failed to initialize database pool: {e}")
+    raise  # Crash the app to log the error
+
 
 CSV_URL = "https://drive.google.com/uc?id=1EV4AoEymcBA3FEFgce2-Dq9cBSXu4rIu"
 df = pd.read_csv(CSV_URL)
@@ -194,7 +199,7 @@ def stage2():
                               confidence_score=task_data['Confidence_Score'], 
                               graph_url=graph_url, 
                               initial_decision=initial_decision)
-"""
+
 @app.route('/test-db')
 def test_db():
     conn = db_pool.getconn()
@@ -208,7 +213,7 @@ def test_db():
     finally:
         db_pool.putconn(conn)
 
-"""
+
 if __name__ == '__main__':
     #app.run(debug=True)
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
