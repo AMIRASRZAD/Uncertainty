@@ -1,0 +1,21 @@
+Condition,Confidence_Score,Final_Decision,ID,Initial_Decision,Level,Predicted
+1,2,high risk,69,high risk,1,non-default
+1,2,low risk,27,low risk,1,non-default
+1,9,high risk,369,high risk,5,non-default
+1,5,high risk,192,high risk,3,non-default
+1,1,low risk,12,high risk,1,default
+1,4,low risk,107,high risk,2,default
+1,9,low risk,323,high risk,5,non-default
+1,7,low risk,302,high risk,4,default
+1,5,low risk,168,high risk,3,default
+1,8,low risk,316,high risk,4,default
+1,5,low risk,228,high risk,3,default
+1,3,low risk,92,high risk,2,non-default
+1,8,low risk,308,high risk,4,non-default
+1,1,low risk,15,high risk,1,non-default
+1,5,low risk,225,high risk,3,default
+1,9,low risk,367,high risk,5,non-default
+1,7,low risk,283,high risk,4,default
+1,2,low risk,109,high risk,2,default
+1,4,low risk,125,high risk,2,default
+1,9,low risk,362,high risk,5,non-default
