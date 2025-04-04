@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Welcome</title>
+    <title>Credit Risk Study</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body {
@@ -10,11 +10,22 @@
             background-color: #f4f7fa;
             margin: 0;
             padding: 50px;
+            line-height: 1.6;
         }
         h1 {
             font-size: 36px;
             color: #2c3e50;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
+        }
+        p {
+            font-size: 18px;
+            color: #34495e;
+            max-width: 800px;
+            margin: 0 auto 20px;
+        }
+        .highlight {
+            font-weight: 700;
+            color: #3498db;
         }
         button {
             background-color: #3498db;
@@ -32,9 +43,14 @@
     </style>
 </head>
 <body>
-    <h1>Are you ready to start the study?</h1>
+    <h1>Welcome to the Credit Risk Study</h1>
+    <p>Thank you for participating in this research experiment! You’re about to help us understand how people make decisions about <span class="highlight">credit risk</span>—a key factor in financial lending.</p>
+    <p><span class="highlight">What to Expect:</span> You’ll review 20 customer profiles, each with details like credit usage, payment history, debt, and income. For each, you’ll make an initial decision (e.g., “low risk” or “high risk”) based on this data. Depending on your group, you might then see predictions or graphs to refine your choice.</p>
+    <p><span class="highlight">Your Role:</span> Imagine you’re a loan officer. Your decisions will simulate real-world judgments. There’s no right or wrong—just use your best judgment based on the information provided.</p>
+    <p><span class="highlight">Why It Matters:</span> Your input will help us explore how additional tools (like AI predictions or visuals) affect decision-making. This could improve how financial institutions assess risk.</p>
+    <p>Ready? Click below to begin. It’ll take about 10-15 minutes. Let’s get started!</p>
     <form method="post" action="{{ url_for('start') }}">
-        <button type="submit">Start</button>
+        <button type="submit">Start the Experiment</button>
     </form>
 </body>
 </html>
