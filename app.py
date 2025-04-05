@@ -19,7 +19,7 @@ db_pool = psycopg2.pool.SimpleConnectionPool(
     sslmode='require'
 )
 
-CSV_URL = "https://drive.google.com/uc?id=1EV4AoEymcBA3FEFgce2-Dq9cBSXu4rIu"
+CSV_URL = "https://drive.google.com/uc?id=1l87W3PeMpVR1O19BIurIgC9kyqgLvRLr"
 df = pd.read_csv(CSV_URL)
 for col in df.columns:
     if df[col].dtype == 'int64':
