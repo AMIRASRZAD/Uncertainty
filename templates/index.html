@@ -45,12 +45,28 @@
 <body>
     <h1>Welcome to the Credit Risk Study</h1>
     <p>Thank you for participating in this research experiment! You’re about to help us understand how people make decisions about <span class="highlight">credit risk</span>—a key factor in financial lending.</p>
+    
     <p><span class="highlight">What to Expect:</span> You’ll review 20 customer profiles, each with details like credit usage, payment history, debt, and income. For each, you’ll make an initial decision (e.g., “low risk” or “high risk”) based on this data. Depending on your group, you might then see predictions or graphs to refine your choice.</p>
+    
+    <p><span class="highlight">Understanding the Four Features:</span></p>
+    <ul>
+        <li><strong>Credit Usage:</strong> This measures how much of the available credit a customer is using. High credit usage (e.g., using 80% or more of available credit) is generally considered risky as it suggests financial strain or poor management of credit. Low credit usage (e.g., using less than 30% of available credit) is usually seen as responsible credit utilization and indicates lower risk.</li>
+        
+        <li><strong>Payment History:</strong> This is the record of a customer's past payments on debts, including loans and credit cards. A consistent record of timely payments indicates a low-risk customer. In contrast, late payments, defaults, or bankruptcies can signal higher risk. Payment history is often considered the most critical factor in credit risk assessment.</li>
+        
+        <li><strong>Debt:</strong> This feature looks at the total amount of money a customer owes, including credit card balances, loans, and other obligations. High debt levels, particularly when compared to income, suggest a higher risk of default. Lower debt levels, especially when paired with high income, are generally considered safer.</li>
+        
+        <li><strong>Income:</strong> A customer's income provides context for their ability to repay debts. Higher incomes typically correlate with lower risk, as individuals are more likely to have sufficient resources to meet their obligations. Low income, particularly when paired with high debt, can indicate a high-risk scenario.</li>
+    </ul>
+    
     <p><span class="highlight">Your Role:</span> Imagine you’re a loan officer. Your decisions will simulate real-world judgments. There’s no right or wrong—just use your best judgment based on the information provided.</p>
+    
     <p><span class="highlight">Why It Matters:</span> Your input will help us explore how additional tools (like AI predictions or visuals) affect decision-making. This could improve how financial institutions assess risk.</p>
+    
     <p>Ready? Click below to begin. It’ll take about 10-15 minutes. Let’s get started!</p>
     <form method="post" action="{{ url_for('start') }}">
         <button type="submit">Start the Experiment</button>
     </form>
 </body>
+
 </html>
