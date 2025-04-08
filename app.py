@@ -226,8 +226,9 @@ def stage3():
     initial_decision = session.get('current_initial_decision', 'Not Set')
     final_decision = session.get('current_final_decision', 'Not Set')
     
-    # Get actual risk from CSV "Creditability" column
+    # Get actual risk and AI prediction
     actual_risk = "High Risk" if task_data['Creditability'] == 1 else "Low Risk"
+    ai_prediction = task_data['Predicted']
     
     if request.method == 'POST':
         session['responses'].append({
@@ -248,8 +249,8 @@ def stage3():
                           customer_number=customer_number,
                           initial_decision=initial_decision,
                           final_decision=final_decision,
+                          ai_prediction=ai_prediction,
                           actual_risk=actual_risk)
-
 
 @app.route('/test-db')
 def test_db():

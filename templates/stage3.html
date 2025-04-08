@@ -18,8 +18,16 @@
         }
         p {
             font-size: 20px;
-            color: #34495e;
             margin: 10px 0;
+        }
+        .initial, .final {
+            color: #000000; /* Black */
+        }
+        .ai {
+            color: #0000FF; /* Blue */
+        }
+        .actual {
+            color: #006400; /* Dark Green */
         }
         button {
             background-color: #3498db;
@@ -39,9 +47,10 @@
 </head>
 <body>
     <h1>Customer {{ customer_number }} Risk Evaluation Result</h1>
-    <p>You initially classified this customer as "{{ initial_decision }}."</p>
-    <p>Your final decision was "{{ final_decision }}."</p>
-    <p>The actual risk of this customer evaluated by the bank is "{{ actual_risk }}."</p>
+    <p class="initial">You initially classified this customer as "{{ initial_decision }}."</p>
+    <p class="final">Your final decision was "{{ final_decision }}."</p>
+    <p class="ai">The AI predicted this customer's risk as "{{ ai_prediction }}."</p>
+    <p class="actual">The actual risk of this customer evaluated by the bank is "{{ actual_risk }}."</p>
     <form method="post" action="{{ url_for('stage3') }}">
         <button type="submit">Next Customer</button>
     </form>
