@@ -27,6 +27,14 @@
             font-weight: 700;
             color: #3498db;
         }
+        input[type="text"] {
+            padding: 10px;
+            font-size: 18px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            width: 250px;
+        }
         button {
             background-color: #3498db;
             color: white;
@@ -39,6 +47,12 @@
         }
         button:hover {
             background-color: #2980b9;
+        }
+        ul {
+            list-style-position: inside;
+            text-align: left;
+            display: inline-block;
+            margin: 0 auto;
         }
     </style>
 </head>
@@ -63,10 +77,11 @@
     
     <p><span class="highlight">Why It Matters:</span> Your input will help us explore how additional tools (like AI predictions or visuals) affect decision-making. This could improve how financial institutions assess risk.</p>
     
-    <p>Ready? Click below to begin. It’ll take about 10-15 minutes. Let’s get started!</p>
+    <p>Ready? Please enter your name (optional) and click below to begin. It’ll take about 10-15 minutes. Let’s get started!</p>
     <form method="post" action="{{ url_for('start') }}">
+        <input type="text" name="participant_name" placeholder="Enter your name (optional)" />
+        <br>
         <button type="submit">Start the Experiment</button>
     </form>
 </body>
-
 </html>

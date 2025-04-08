@@ -79,15 +79,24 @@ def sample_rows():
 @app.route('/')
 def index():
     return render_template('index.html')
+import uuid
 
 @app.route('/start', methods=['POST'])
 def start():
     available_conditions = [c for c, count in PARTICIPANT_COUNTS.items() if count < MAX_PER_CONDITION]
     if not available_conditions:
         return "Experiment is full!", 403
+    
     condition = int(np.random.choice(available_conditions))
+    participant_name = request.form.get('participant_name', '').strip() or None  # Optional name
+    participant_id = str(uuid.uuid4())  # Unique ID for each participant
+    
+    # Increment participant count for the condition
+    PARTICIPANT_COUNTS[condition] += 1
     
     session['condition'] = condition
+    session['participant_id'] = participant_id
+    session['participant_name'] = participant_name
     session['tasks'] = sample_rows()
     session['task_index'] = 0
     session['responses'] = []
@@ -111,10 +120,10 @@ def task():
                     debt_ratio = float(str(task_data['DebtRatio']).replace('%', '')) / 100 if '%' in str(task_data['DebtRatio']) else float(task_data['DebtRatio'])
                     monthly_income = float(str(task_data['MonthlyIncome']).replace('$', '').replace(',', '')) if any(c in str(task_data['MonthlyIncome']) for c in ['$', ',']) else float(task_data['MonthlyIncome'])
                     cur.execute(
-                        "INSERT INTO responses (participant_id, condition, initial_decision, final_decision, predicted, confidence_score, level, "
+                        "INSERT INTO responses (participant_id, task_number, condition, initial_decision, final_decision, predicted, confidence_score, level, "
                         "revolving_utilization, late_payments_30_59, debt_ratio, monthly_income) "
-                        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
-                        (response['ID'], response['Condition'], response['Initial_Decision'], 
+                        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                        (session['participant_id'], response['Task_Number'], response['Condition'], response['Initial_Decision'], 
                          response['Final_Decision'], response['Predicted'], response['Confidence_Score'], 
                          response['Level'], revolving_util, late_payments, debt_ratio, monthly_income)
                     )
@@ -122,8 +131,8 @@ def task():
                 print("Data committed to Neon")
         except psycopg2.OperationalError as e:
             print(f"Database connection error: {e}")
-            conn.close()  # Close broken connection
-            db_pool.putconn(conn, close=True)  # Mark as closed
+            conn.close()
+            db_pool.putconn(conn, close=True)
             return "Database error, please try again", 500
         except Exception as e:
             print(f"Database error: {e}")
@@ -131,7 +140,7 @@ def task():
             db_pool.putconn(conn)
             return "Error saving data", 500
         finally:
-            if conn and not conn.closed:  # Only return if not closed
+            if conn and not conn.closed:
                 db_pool.putconn(conn)
         return render_template('end.html')
     
@@ -140,18 +149,8 @@ def task():
     
     if request.method == 'POST':
         initial_decision = request.form['initial_decision']
-        final_decision = request.form.get('final_decision', initial_decision)
-        session['responses'].append({
-            'ID': task_data['ID'],
-            'Condition': condition,
-            'Initial_Decision': initial_decision,
-            'Final_Decision': final_decision,
-            'Predicted': task_data['Predicted'],
-            'Confidence_Score': task_data['Confidence_Score'],
-            'Level': task_data['Level']
-        })
-        session['task_index'] += 1
-        return redirect(url_for('task'))
+        session['current_initial_decision'] = initial_decision
+        return redirect(url_for('stage2'))
     
     customer_info = {
         "RevolvingUtilizationOfUnsecuredLines": task_data["RevolvingUtilizationOfUnsecuredLines"],
@@ -159,40 +158,19 @@ def task():
         "DebtRatio": task_data["DebtRatio"],
         "MonthlyIncome": task_data["MonthlyIncome"]
     }
-    return render_template('stage1.html', customer_info=customer_info, averages=AVERAGES)
+    customer_number = task_index + 1  # 1-based index (1 to 20)
+    return render_template('stage1.html', customer_info=customer_info, averages=AVERAGES, customer_number=customer_number)
 
-    
-    task_data = session['tasks'][task_index]
+@app.route('/stage2', methods=['GET', 'POST'])
+def stage2():
+    initial_decision = session.get('current_initial_decision')
+    task_data = session['tasks'][session['task_index']]
     condition = session['condition']
     
     if request.method == 'POST':
-        initial_decision = request.form['initial_decision']
         final_decision = request.form.get('final_decision', initial_decision)
-        session['responses'].append({
-            'ID': task_data['ID'],
-            'Condition': condition,
-            'Initial_Decision': initial_decision,
-            'Final_Decision': final_decision,
-            'Predicted': task_data['Predicted'],
-            'Confidence_Score': task_data['Confidence_Score'],
-            'Level': task_data['Level']
-        })
-        session['task_index'] += 1
-        return redirect(url_for('task'))
-    
-    customer_info = {
-        "RevolvingUtilizationOfUnsecuredLines": task_data["RevolvingUtilizationOfUnsecuredLines"],
-        "NumberOfTime30-59DaysPastDueNotWorse": task_data["NumberOfTime30-59DaysPastDueNotWorse"],
-        "DebtRatio": task_data["DebtRatio"],
-        "MonthlyIncome": task_data["MonthlyIncome"]
-    }
-    return render_template('stage1.html', customer_info=customer_info, averages=AVERAGES)
-
-@app.route('/stage2', methods=['POST'])
-def stage2():
-    initial_decision = request.form['initial_decision']
-    task_data = session['tasks'][session['task_index']]
-    condition = session['condition']
+        session['current_final_decision'] = final_decision
+        return redirect(url_for('stage3'))
     
     if condition == 1:
         return render_template('stage2_condition1.html', 
@@ -221,6 +199,38 @@ def stage2():
                               confidence_score=task_data['Confidence_Score'], 
                               graph_url=graph_url, 
                               initial_decision=initial_decision)
+       
+@app.route('/stage3', methods=['GET', 'POST'])
+def stage3():
+    task_index = session['task_index']
+    task_data = session['tasks'][task_index]
+    initial_decision = session.get('current_initial_decision')
+    final_decision = session.get('current_final_decision')
+    
+    # Get actual risk from CSV "Creditability" column
+    actual_risk = "High Risk" if task_data['Creditability'] == 1 else "Low Risk"
+    
+    if request.method == 'POST':
+        session['responses'].append({
+            'ID': task_data['ID'],
+            'Task_Number': task_index + 1,  # 1-based task number (1 to 20)
+            'Condition': session['condition'],
+            'Initial_Decision': initial_decision,
+            'Final_Decision': final_decision,
+            'Predicted': task_data['Predicted'],
+            'Confidence_Score': task_data['Confidence_Score'],
+            'Level': task_data['Level']
+        })
+        session['task_index'] += 1  # Move to next customer
+        return redirect(url_for('task'))
+    
+    customer_number = task_index + 1
+    return render_template('stage3.html', 
+                          customer_number=customer_number,
+                          initial_decision=initial_decision,
+                          final_decision=final_decision,
+                          actual_risk=actual_risk)
+
 
 @app.route('/test-db')
 def test_db():
