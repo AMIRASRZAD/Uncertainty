@@ -27,10 +27,10 @@ for col in df.columns:
 
 # Define average values
 AVERAGES = {
-    "RevolvingUtilizationOfUnsecuredLines": .25,
-    "NumberOfTime30-59DaysPastDueNotWorse": 0.1,
-    "DebtRatio": .20,
-    "MonthlyIncome": 3000
+    "RevolvingUtilizationOfUnsecuredLines": "46%" ,
+    "NumberOfTime30-59DaysPastDueNotWorse": 0.54,
+    "DebtRatio": "43%",
+    "MonthlyIncome": 6340
 }
 
 # Graph URLs
