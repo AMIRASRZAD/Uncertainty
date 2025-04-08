@@ -163,15 +163,22 @@ def task():
 
 @app.route('/stage2', methods=['GET', 'POST'])
 def stage2():
-    initial_decision = session.get('current_initial_decision')
-    task_data = session['tasks'][session['task_index']]
+    if 'condition' not in session or 'current_initial_decision' not in session:
+        return redirect(url_for('task'))  # Redirect back if session is incomplete
+    
+    task_index = session['task_index']
+    task_data = session['tasks'][task_index]
+    initial_decision = session['current_initial_decision']
     condition = session['condition']
     
     if request.method == 'POST':
-        final_decision = request.form.get('final_decision', initial_decision)
+        final_decision = request.form.get('final_decision', initial_decision)  # Default to initial if not provided
+        if final_decision not in ['high risk', 'low risk']:  # Validate input
+            final_decision = initial_decision
         session['current_final_decision'] = final_decision
         return redirect(url_for('stage3'))
     
+    # GET request: Render the appropriate Stage 2 template
     if condition == 1:
         return render_template('stage2_condition1.html', 
                               predicted=task_data['Predicted'], 
@@ -199,13 +206,14 @@ def stage2():
                               confidence_score=task_data['Confidence_Score'], 
                               graph_url=graph_url, 
                               initial_decision=initial_decision)
-       
+    
+
 @app.route('/stage3', methods=['GET', 'POST'])
 def stage3():
     task_index = session['task_index']
     task_data = session['tasks'][task_index]
-    initial_decision = session.get('current_initial_decision')
-    final_decision = session.get('current_final_decision')
+    initial_decision = session.get('current_initial_decision', 'Not Set')
+    final_decision = session.get('current_final_decision', 'Not Set')
     
     # Get actual risk from CSV "Creditability" column
     actual_risk = "High Risk" if task_data['Creditability'] == 1 else "Low Risk"
@@ -213,7 +221,7 @@ def stage3():
     if request.method == 'POST':
         session['responses'].append({
             'ID': task_data['ID'],
-            'Task_Number': task_index + 1,  # 1-based task number (1 to 20)
+            'Task_Number': task_index + 1,
             'Condition': session['condition'],
             'Initial_Decision': initial_decision,
             'Final_Decision': final_decision,
@@ -221,7 +229,7 @@ def stage3():
             'Confidence_Score': task_data['Confidence_Score'],
             'Level': task_data['Level']
         })
-        session['task_index'] += 1  # Move to next customer
+        session['task_index'] += 1
         return redirect(url_for('task'))
     
     customer_number = task_index + 1

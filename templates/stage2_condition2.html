@@ -44,7 +44,7 @@
     <h2>The AI Model’s Confidence for This Decision Is:</h2>
     <p>{{ confidence_score }} / 10</p>
     <h2>What Is Your Final Decision?</h2>
-    <form method="post" action="{{ url_for('task') }}">
+    <form method="post" action="{{ url_for('stage2') }}">
         <input type="hidden" name="initial_decision" value="{{ initial_decision }}">
         <button type="submit" name="final_decision" value="high risk">High Risk</button>
         <button type="submit" name="final_decision" value="low risk">Low Risk</button>
