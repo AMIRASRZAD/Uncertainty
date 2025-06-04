@@ -1,87 +1,72 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Stage 1 - Customer Info</title>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stage 1 - Credit Risk Assessment</title>
     <style>
-        body {
-            font-family: 'Montserrat', sans-serif;
-            text-align: center;
-            background-color: #f4f7fa;
-            margin: 0;
-            padding: 20px;
-        }
-        h1 {
-            font-size: 36px;
-            color: #2c3e50;
-            margin-bottom: 20px;
-        }
-        table {
-            margin: 0 auto;
-            border-collapse: collapse;
-            width: 60%;
-            background-color: white;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-        th, td {
-            padding: 15px;
-            font-size: 18px;
-            color: #34495e;
-            border-bottom: 1px solid #ddd;
-        }
-        th {
-            background-color: #3498db;
-            color: white;
-        }
-        button {
-            background-color: #3498db;
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            font-size: 18px;
-            border-radius: 25px;
-            cursor: pointer;
-            margin: 20px;
-            transition: background-color 0.3s;
-        }
-        button:hover {
-            background-color: #2980b9;
-        }
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 600px; margin: auto; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 5px; }
+        .form-group input { width: 100px; padding: 5px; }
+        button { padding: 10px 20px; background-color: #4CAF50; color: white; border: none; cursor: pointer; }
+        button:hover { background-color: #45a049; }
     </style>
+    <script>
+        function showDecisionPopup() {
+            var score = parseInt(document.getElementById('initial_risk_score').value);
+            if (score >= 1 && score <= 10) {
+                var decision = score < 6 ? 'accepted' : 'rejected';
+                alert('You have ' + decision + ' this customer.');
+                document.getElementById('riskForm').submit();
+            } else {
+                alert('Please enter a valid risk score between 1 and 10.');
+                return false;
+            }
+        }
+    </script>
 </head>
 <body>
-    <h1>Customer {{ customer_number }} out of 20 Customer Information</h1>
-    <table>
-        <tr>
-            <th>Metric</th>
-            <th>Customer Value</th>
-            <th>Average Value</th>
-        </tr>
-        <tr>
-            <td>Credit Utilization Ratio</td>
-            <td>{{ customer_info["RevolvingUtilizationOfUnsecuredLines"] }}</td>
-            <td>{{ averages["RevolvingUtilizationOfUnsecuredLines"] }}</td>
-        </tr>
-        <tr>
-            <td>Number of Late Payments (30-59 Days)</td>
-            <td>{{ customer_info["NumberOfTime30-59DaysPastDueNotWorse"] }}</td>
-            <td>{{ averages["NumberOfTime30-59DaysPastDueNotWorse"] }}</td>
-        </tr>
-        <tr>
-            <td>Debt-to-Income Ratio</td>
-            <td>{{ customer_info["DebtRatio"] }}</td>
-            <td>{{ averages["DebtRatio"] }}</td>
-        </tr>
-        <tr>
-            <td>Monthly Income $</td>
-            <td>{{ customer_info["MonthlyIncome"] }}</td>
-            <td>{{ averages["MonthlyIncome"] }}</td>
-        </tr>
-    </table>
-    <h1>How is this customer's risk for the bank?</h1>
-    <form method="post" action="{{ url_for('task') }}">
-        <button type="submit" name="initial_decision" value="high risk">High Risk</button>
-        <button type="submit" name="initial_decision" value="low risk">Low Risk</button>
-    </form>
+    <div class="container">
+        <h2>Customer {{ customer_number }} out of 20: Credit Risk Assessment</h2>
+        <table>
+            <tr>
+                <th>Metric</th>
+                <th>Customer Value</th>
+                <th>Average Value</th>
+            </tr>
+            <tr>
+                <td>Credit Utilization Ratio</td>
+                <td>{{ customer_info.RevolvingUtilizationOfUnsecuredLines }}</td>
+                <td>{{ averages.RevolvingUtilizationOfUnsecuredLines }}</td>
+            </tr>
+            <tr>
+                <td>Number of Late Payments (30-59 Days)</td>
+                <td>{{ customer_info.NumberOfTime30-59DaysPastDueNotWorse }}</td>
+                <td>{{ averages.NumberOfTime30-59DaysPastDueNotWorse }}</td>
+            </tr>
+            <tr>
+                <td>Debt-to-Income Ratio</td>
+                <td>{{ customer_info.DebtRatio }}</td>
+                <td>{{ averages.DebtRatio }}</td>
+            </tr>
+            <tr>
+                <td>Monthly Income</td>
+                <td>{{ customer_info.MonthlyIncome }}</td>
+                <td>{{ averages.MonthlyIncome }}</td>
+            </tr>
+        </table>
+        <form id="riskForm" method="POST" action="{{ url_for('task') }}">
+            <div class="form-group">
+                <label for="initial_risk_score">Give a risk score to this customer (1-10, 10 is riskiest):</label>
+                <input type="number" id="initial_risk_score" name="initial_risk_score" min="1" max="10" required>
+            </div>
+            <button type="button" onclick="showDecisionPopup()">Submit</button>
+        </form>
+    </div>
 </body>
 </html>

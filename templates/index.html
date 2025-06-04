@@ -1,87 +1,41 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Credit Risk Study</title>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to the Credit Risk Study</title>
     <style>
-        body {
-            font-family: 'Montserrat', sans-serif;
-            text-align: center;
-            background-color: #f4f7fa;
-            margin: 0;
-            padding: 50px;
-            line-height: 1.6;
-        }
-        h1 {
-            font-size: 36px;
-            color: #2c3e50;
-            margin-bottom: 20px;
-        }
-        p {
-            font-size: 18px;
-            color: #34495e;
-            max-width: 800px;
-            margin: 0 auto 20px;
-        }
-        .highlight {
-            font-weight: 700;
-            color: #3498db;
-        }
-        input[type="text"] {
-            padding: 10px;
-            font-size: 18px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            width: 250px;
-        }
-        button {
-            background-color: #3498db;
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            font-size: 18px;
-            border-radius: 25px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        button:hover {
-            background-color: #2980b9;
-        }
-        ul {
-            list-style-position: inside;
-            text-align: left;
-            display: inline-block;
-            margin: 0 auto;
-        }
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 600px; margin: auto; }
+        button { padding: 10px 20px; background-color: #4CAF50; color: white; border: none; cursor: pointer; }
+        button:hover { background-color: #45a049; }
     </style>
 </head>
 <body>
-    <h1>Welcome to the Credit Risk Study</h1>
-    <p>Thank you for participating in this research experiment! You’re about to help us understand how people make decisions about <span class="highlight">credit risk</span>—a key factor in financial lending.</p>
-    
-    <p><span class="highlight">What to Expect:</span> You’ll review 20 customer profiles, each with details like credit usage, payment history, debt, and income. For each, you’ll make an initial decision (e.g., “low risk” or “high risk”) based on this data. Depending on your group, you might then see predictions or graphs to refine your choice.</p>
-    
-    <p><span class="highlight">Understanding the Four Features:</span></p>
-    <ul>
-        <li><strong>Credit Usage:</strong> This measures how much of the available credit a customer is using. High credit usage (e.g., using 80% or more of available credit) is generally considered risky as it suggests financial strain or poor management of credit. Low credit usage (e.g., using less than 30% of available credit) is usually seen as responsible credit utilization and indicates lower risk.</li>
-        
-        <li><strong>Payment History:</strong> This is the record of a customer's past payments on debts, including loans and credit cards. A consistent record of timely payments indicates a low-risk customer. In contrast, late payments, defaults, or bankruptcies can signal higher risk. Payment history is often considered the most critical factor in credit risk assessment.</li>
-        
-        <li><strong>Debt:</strong> This feature looks at the total amount of money a customer owes, including credit card balances, loans, and other obligations. High debt levels, particularly when compared to income, suggest a higher risk of default. Lower debt levels, especially when paired with high income, are generally considered safer.</li>
-        
-        <li><strong>Income:</strong> A customer's income provides context for their ability to repay debts. Higher incomes typically correlate with lower risk, as individuals are more likely to have sufficient resources to meet their obligations. Low income, particularly when paired with high debt, can indicate a high-risk scenario.</li>
-    </ul>
-    
-    <p><span class="highlight">Your Role:</span> Imagine you’re a loan officer. Your decisions will simulate real-world judgments. There’s no right or wrong—just use your best judgment based on the information provided.</p>
-    
-    <p><span class="highlight">Why It Matters:</span> Your input will help us explore how additional tools (like AI predictions or visuals) affect decision-making. This could improve how financial institutions assess risk.</p>
-    
-    <p>Ready? Please enter your name (optional) and click below to begin. It’ll take about 10-15 minutes. Let’s get started!</p>
-    <form method="post" action="{{ url_for('start') }}">
-        <input type="text" name="participant_name" placeholder="Enter your name (optional)" />
-        <br>
-        <button type="submit">Start the Experiment</button>
-    </form>
+    <div class="container">
+        <h1>Welcome to the Credit Risk Study</h1>
+        <p>Thank you for participating in this research experiment! You’re about to t help us understand how people make decisions about credit risk—a key factor in financial lending.</p>
+        <h2>What to Expect:</h2>
+        <p>You’ll review 20 customer profiles, each with details like credit usage, payment history, debt, and income. For each, you’ll make an initial decision (e.g., “low risk” or “high risk” risk”) based on this data. Depending on your group, you might then see predictions or graphs to refine your choice.</p>
+        <h2>Understanding the Four Features:</h2>
+        <ul>
+            <li><strong>Credit Usage:</strong>: This measures how much of the available credit a customer is using. High credit usage (e.g., using 80% or more of available credit) credit is generally considered risky as it suggests financial strain or poor management of credit. Low credit usage (e.g., using less than 30% of available credit) of is usually seen as responsible credit utilization and indicates lower risk.</li>
+            <li><strong>Payment History:</strong> This is the record of a customer's payment history on debts, including loans and credit cards. A consistent record of timely payments indicates a low-risk customer. In contrast, late payments, defaults, or bankruptcies can signal higher risk. Payment history is often considered the most critical factor in credit risk assessment.</li>
+            <li><strong>Debt:</strong> This feature looks at the total amount of money a customer owes, including credit card balances, loans, and other obligations. High debt levels, particularly when compared to income, suggest a higher risk of default. Lower debt levels, especially when paired with high income, are generally safer.</li>
+            <li><strong>Income:</strong> A customer's income provides context for their ability to repay debts. Higher incomes typically correlate with lower risk, as individuals are more likely to have sufficient resources to meet their obligations. Low income, particularly when paired with high debt, can indicate a high-risk scenario.</li>
+        </ul>
+        <h2>Your Role:</h2>
+        <p>Imagine you’re a role officer. Your decisions will simulate real-world judgments. There’s no real-world or wrong—just use your best judgment based on the information provided.</p>
+        <h2>Why It Matters:</h2>
+        <p>Your input will help us explore how additional tools (like AI predictions or visuals) affect decision-making. This could improve how financial institutions assess risk.</p>
+        <h2>Ready?</h2>
+        <p>Please enter your name (optional) and click below to begin. It’ll take about 10-15 minutes. Let’s get started!</p>
+        <form method="POST" action="{{ url_for('start') }}">
+            <label for="participant_name">Name (optional):</label>
+            <input type="text" id="participant_name" name="participant_name">
+            <br><br>
+            <button type="submit">Start the Experiment</button>
+        </form>
+    </div>
 </body>
 </html>

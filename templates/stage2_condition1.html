@@ -1,51 +1,44 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Stage 2 - Condition 1</title>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stage 2 - No Uncertainty Information</title>
     <style>
-        body {
-            font-family: 'Montserrat', sans-serif;
-            text-align: center;
-            background-color: #f4f7fa;
-            margin: 0;
-            padding: 20px;
-        }
-        h2 {
-            font-size: 28px;
-            color: #2c3e50;
-            margin: 20px 0;
-        }
-        p {
-            font-size: 36px;
-            font-weight: 700;
-            color: #2980b9;
-            margin: 15px 0;
-        }
-        button {
-            background-color: #3498db;
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            font-size: 18px;
-            border-radius: 25px;
-            cursor: pointer;
-            margin: 10px;
-            transition: background-color 0.3s;
-        }
-        button:hover {
-            background-color: #2980b9;
-        }
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 600px; margin: auto; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 5px; }
+        .form-group input { width: 100px; padding: 5px; }
+        button { padding: 10px 20px; background-color: #4CAF50; color: white; border: none; cursor: pointer; }
+        button:hover { background-color: #45a049; }
     </style>
+    <script>
+        function validateFinalScore() {
+            var score = parseInt(document.getElementById('final_risk_score').value);
+            if (score >= 1 && score <= 10) {
+                var decision = score < 6 ? 'accepted' : 'rejected';
+                alert('You have ' + decision + ' this customer.');
+                return true;
+            } else {
+                alert('Please enter a valid risk score between 1 and 10.');
+                return false;
+            }
+        }
+    </script>
 </head>
 <body>
-    <h2>The AI Decision for This Customer Is:</h2>
-    <p>{{ predicted }}</p>
-    <h2>What Is Your Final Decision?</h2>
-    <form method="post" action="{{ url_for('stage2') }}">
-        <input type="hidden" name="initial_decision" value="{{ initial_decision }}">
-        <button type="submit" name="final_decision" value="high risk">High Risk</button>
-        <button type="submit" name="final_decision" value="low risk">Low Risk</button>
-    </form>
+    <div class="container">
+        <h2>Stage 2 - Customer Risk Assessment (No Uncertainty)</h2>
+        <p>Your initial risk score: {{ initial_risk_score }} ({{ initial_decision }})</p>
+        <p>The AI's predicted risk for this customer is {{ predicted_risk_score }} and will be rated as {{ 'accepted' if predicted_risk_score < 6 else 'rejected' }}.</p>
+        <form method="POST" action="{{ url_for('stage2') }}" onsubmit="return validateFinalScore()">
+            <div class="form-group">
+                <label for="final_risk_score">What is your final risk score for this customer (1-10, 10 is riskiest):</label>
+                <input type="number" id="final_risk_score" name="final_risk_score" min="1" max="10" required>
+            </div>
+            <button type="submit">Submit Final Score</button>
+        </form>
+    </div>
 </body>
 </html>

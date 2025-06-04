@@ -4,6 +4,9 @@ import numpy as np
 import os
 import psycopg2
 from psycopg2 import pool
+import uuid
+import json
+import random
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', '1234')
@@ -19,44 +22,122 @@ db_pool = psycopg2.pool.SimpleConnectionPool(
     sslmode='require'
 )
 
+# Load updated CSV
 CSV_URL = "https://drive.google.com/uc?id=1l87W3PeMpVR1O19BIurIgC9kyqgLvRLr"
 df = pd.read_csv(CSV_URL)
 for col in df.columns:
     if df[col].dtype == 'int64':
         df[col] = df[col].astype(int)
+    elif df[col].dtype == 'float64':
+        df[col] = df[col].astype(float)
 
 # Define average values
 AVERAGES = {
-    "RevolvingUtilizationOfUnsecuredLines": "46%" ,
+    "RevolvingUtilizationOfUnsecuredLines": "46%",
     "NumberOfTime30-59DaysPastDueNotWorse": 0.54,
     "DebtRatio": "43%",
     "MonthlyIncome": 6340
 }
 
-# Graph URLs
-GRAPH_URLS = {
-    "condition3": {
-        "0.5-0.6": "https://raw.githubusercontent.com/AMIRASRZAD/Uncertainty/main/condition3-level%200.5-0.6.png",
-        "0.6-0.7": "https://raw.githubusercontent.com/AMIRASRZAD/Uncertainty/main/condition3-level%200.6-0.7.png",
-        "0.7-0.8": "https://raw.githubusercontent.com/AMIRASRZAD/Uncertainty/main/condition3-level%200.7-0.8.png",
-        "0.8-0.9": "https://raw.githubusercontent.com/AMIRASRZAD/Uncertainty/main/condition3-level%200.8-0.9.png",
-        "0.9-1.0": "https://raw.githubusercontent.com/AMIRASRZAD/Uncertainty/main/condition3-level%200.9-1.0.png"
-    },
-    "condition4": {
-        "0.5-0.6": "https://raw.githubusercontent.com/AMIRASRZAD/Uncertainty/main/condition4-level%200.5-0.6.png",
-        "0.6-0.7-default": "https://raw.githubusercontent.com/AMIRASRZAD/Uncertainty/main/condition4-level%200.6-0.7-default.png",
-        "0.6-0.7-non-default": "https://raw.githubusercontent.com/AMIRASRZAD/Uncertainty/main/condition4-level%200.6-0.7-non-default.png",
-        "0.7-0.8-default": "https://raw.githubusercontent.com/AMIRASRZAD/Uncertainty/main/condition4-level%200.7-0.8-default.png",
-        "0.7-0.8-non-default": "https://raw.githubusercontent.com/AMIRASRZAD/Uncertainty/main/condition4-level%200.7-0.8-non-default.png",
-        "0.8-0.9-default": "https://raw.githubusercontent.com/AMIRASRZAD/Uncertainty/main/condition4-level%200.8-0.9-default.png",
-        "0.8-0.9-non-default": "https://raw.githubusercontent.com/AMIRASRZAD/Uncertainty/main/condition4-level%200.8-0.9-non-default.png",
-        "0.9-1.0-default": "https://raw.githubusercontent.com/AMIRASRZAD/Uncertainty/main/condition4-level%200.9-1.0-default.png",
-        "0.9-1.0-non-default": "https://raw.githubusercontent.com/AMIRASRZAD/Uncertainty/main/condition4-level%200.9-1.0-non-default.png"
-    }
-}
-
-PARTICIPANT_COUNTS = {1: 0, 2: 0, 3: 0, 4: 0}
+# Participant counts for conditions (1, 2, 3)
+PARTICIPANT_COUNTS = {1: 0, 2: 0, 3: 0}
 MAX_PER_CONDITION = 50
+
+def epistemic_charts(uncertainty_level, total_states=10):
+    num_trained_states = 5 + (uncertainty_level - 1)
+    random.seed(num_trained_states)
+    state_numbers = list(range(1, total_states + 1))
+    trained_state_indices = random.sample(state_numbers, num_trained_states)
+    
+    labels = [f"State {i}" for i in state_numbers]
+    heights = [1.0 if i in trained_state_indices else 0.1 for i in state_numbers]
+    colors = ['rgba(144, 238, 144, 0.5)' if i in trained_state_indices else 'rgba(169, 169, 169, 0.5)' for i in state_numbers]
+    border_colors = ['rgba(0, 128, 0, 1)' if i in trained_state_indices else 'rgba(105, 105, 105, 1)' for i in state_numbers]
+    
+    return {
+        "type": "bar",
+        "data": {
+            "labels": labels,
+            "datasets": [{
+                "label": "Data Volume",
+                "data": heights,
+                "backgroundColor": colors,
+                "borderColor": border_colors,
+                "borderWidth": 1.5
+            }]
+        },
+        "options": {
+            "scales": {
+                "x": {"display": True},
+                "y": {"beginAtZero": True, "max": 1.1, "display": False}
+            },
+            "plugins": {
+                "legend": {
+                    "display": True,
+                    "labels": {
+                        "generateLabels": lambda chart: [
+                            {"text": "Trained States (High Data Volume)", "fillStyle": "rgba(144, 238, 144, 0.5)", "strokeStyle": "rgba(0, 128, 0, 1)"},
+                            {"text": "Untrained States (Low/No Data Volume)", "fillStyle": "rgba(169, 169, 169, 0.5)", "strokeStyle": "rgba(105, 105, 105, 1)"}
+                        ]
+                    }
+                },
+                "title": {"display": True, "text": f"Epistemic Uncertainty (Level {uncertainty_level})"}
+            }
+        }
+    }
+
+def aleatoric_charts(level, focal_score=1):
+    counts = {i: 0 for i in range(1, 11)}
+    max_offset = 3 if focal_score in [1, 2, 3, 8, 9, 10] else 4
+    for off in range(-max_offset, max_offset + 1):
+        score = focal_score + off
+        if score < 1 or score > 10:
+            continue
+        dist = abs(off)
+        if level == 1:
+            base = random.randint(3, 4)
+        elif level == 2:
+            base = random.randint(4, 5) if dist <= 1 else random.randint(3, 4) if dist == 2 else random.randint(0, 2)
+        elif level == 3:
+            base = random.randint(6, 7) if dist == 0 else random.randint(4, 5) if dist == 1 else random.randint(2, 3) if dist == 2 else random.randint(0, 1)
+        elif level == 4:
+            base = random.randint(8, 9) if dist == 0 else random.randint(5, 6) if dist == 1 else random.randint(3, 4) if dist == 2 else random.randint(0, 1)
+        else:
+            base = random.randint(9, 10) if dist == 0 else random.randint(5, 6) if dist == 1 else random.randint(3, 4) if dist == 2 else random.randint(1, 2) if dist == 3 else random.randint(0, 1)
+        counts[score] = base
+    
+    data_points = []
+    for score, num in counts.items():
+        for i in range(num):
+            data_points.append({"x": score, "y": i, "color": 'rgba(0, 128, 0, 0.7)' if score <= 5 else 'rgba(255, 0, 0, 0.7)'})
+    
+    return {
+        "type": "scatter",
+        "data": {
+            "datasets": [{
+                "label": f"Aleatoric Uncertainty (Level {level}, Focal {focal_score})",
+                "data": [{"x": point["x"], "y": point["y"]} for point in data_points],
+                "backgroundColor": [point["color"] for point in data_points],
+                "pointRadius": 10
+            }, {
+                "type": "line",
+                "label": "Threshold",
+                "data": [{"x": 5.5, "y": 0}, {"x": 5.5, "y": max(counts.values()) + 1}],
+                "borderColor": "rgba(128, 128, 128, 1)",
+                "borderDash": [5, 5],
+                "pointRadius": 0
+            }]
+        },
+        "options": {
+            "scales": {
+                "x": {"min": 0.5, "max": 10.5, "ticks": {"stepSize": 1}, "title": {"display": True, "text": "Risk Score (1-10)"}},
+                "y": {"min": -0.5, "max": max(counts.values()) + 1, "display": False}
+            },
+            "plugins": {
+                "title": {"display": True, "text": f"Aleatoric Uncertainty (Level {level})"}
+            }
+        }
+    }
 
 def sample_rows():
     ranges = ["0.5-0.6", "0.6-0.7", "0.7-0.8", "0.8-0.9", "0.9-1.0"]
@@ -79,7 +160,6 @@ def sample_rows():
 @app.route('/')
 def index():
     return render_template('index.html')
-import uuid
 
 @app.route('/start', methods=['POST'])
 def start():
@@ -88,10 +168,9 @@ def start():
         return "Experiment is full!", 403
     
     condition = int(np.random.choice(available_conditions))
-    participant_name = request.form.get('participant_name', '').strip() or None  # Optional name
-    participant_id = str(uuid.uuid4())  # Unique ID for each participant
+    participant_name = request.form.get('participant_name', '').strip() or None
+    participant_id = str(uuid.uuid4())
     
-    # Increment participant count for the condition
     PARTICIPANT_COUNTS[condition] += 1
     
     session['condition'] = condition
@@ -102,12 +181,10 @@ def start():
     session['responses'] = []
     
     return redirect(url_for('task'))
-import time
 
 @app.route('/task', methods=['GET', 'POST'])
 def task():
     if 'condition' not in session:
-        print("No condition in session, redirecting to index")
         return redirect(url_for('index'))
     
     task_index = session['task_index']
@@ -124,26 +201,23 @@ def task():
                         debt_ratio = float(str(task_data['DebtRatio']).replace('%', '')) / 100 if '%' in str(task_data['DebtRatio']) else float(task_data['DebtRatio'])
                         monthly_income = float(str(task_data['MonthlyIncome']).replace('$', '').replace(',', '')) if any(c in str(task_data['MonthlyIncome']) for c in ['$', ',']) else float(task_data['MonthlyIncome'])
                         cur.execute(
-                            "INSERT INTO responses (participant_id, task_number, condition, initial_decision, final_decision, predicted, confidence_score, level, "
+                            "INSERT INTO responses (participant_id, task_number, condition, initial_risk_score, final_risk_score, predicted_risk_score, uncertainty_level, uncertainty_type, actual_risk, "
                             "revolving_utilization, late_payments_30_59, debt_ratio, monthly_income) "
-                            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
-                            (session['participant_id'], response['Task_Number'], response['Condition'], response['Initial_Decision'], 
-                             response['Final_Decision'], response['Predicted'], response['Confidence_Score'], 
-                             response['Level'], revolving_util, late_payments, debt_ratio, monthly_income)
+                            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                            (session['participant_id'], response['Task_Number'], response['Condition'], response['Initial_Risk_Score'], 
+                             response['Final_Risk_Score'], response['Predicted_Risk_Score'], response['Uncertainty_Level'], 
+                             response['Uncertainty_Type'], response['Actual_Risk'], revolving_util, late_payments, debt_ratio, monthly_income)
                         )
                     conn.commit()
-                    print("Data committed to Neon")
-                break  # Exit retry loop on success
+                break
             except psycopg2.OperationalError as e:
-                print(f"Database connection error (attempt {attempt + 1}/{max_retries}): {e}")
                 if attempt < max_retries - 1:
-                    time.sleep(2)  # Wait before retrying
+                    time.sleep(2)
                     continue
                 conn.close()
                 db_pool.putconn(conn, close=True)
                 return "Database connection failed after retries, please try again", 500
             except Exception as e:
-                print(f"Database error: {e}")
                 conn.rollback()
                 db_pool.putconn(conn)
                 return "Error saving data", 500
@@ -156,13 +230,15 @@ def task():
     condition = session['condition']
     
     if request.method == 'POST':
-        initial_decision = request.form.get('initial_decision')
-        print(f"Task POST - Initial Decision: {initial_decision}")
-        if initial_decision not in ['high risk', 'low risk']:
-            print("Invalid initial_decision, aborting")
-            return "Invalid decision", 400
-        session['current_initial_decision'] = initial_decision
-        print(f"Session set: current_initial_decision={session['current_initial_decision']}")
+        initial_risk_score = request.form.get('initial_risk_score')
+        try:
+            initial_risk_score = int(initial_risk_score)
+            if initial_risk_score < 1 or initial_risk_score > 10:
+                raise ValueError
+        except (ValueError, TypeError):
+            return "Invalid risk score. Please enter a number between 1 and 10.", 400
+        session['current_initial_risk_score'] = initial_risk_score
+        session['current_initial_decision'] = 'accept' if initial_risk_score < 6 else 'reject'
         return redirect(url_for('stage2'))
     
     customer_number = task_index + 1
@@ -172,85 +248,102 @@ def task():
         "DebtRatio": task_data["DebtRatio"],
         "MonthlyIncome": task_data["MonthlyIncome"]
     }
-    print(f"Rendering Stage 1 - Customer {customer_number}")
     return render_template('stage1.html', customer_info=customer_info, averages=AVERAGES, customer_number=customer_number)
-
-
 
 @app.route('/stage2', methods=['GET', 'POST'])
 def stage2():
     task_index = session.get('task_index', 0)
     task_data = session['tasks'][task_index]
     condition = session.get('condition')
+    initial_risk_score = session.get('current_initial_risk_score')
     initial_decision = session.get('current_initial_decision')
     
-    print(f"Stage 2 - Method: {request.method}, Condition: {condition}, Initial Decision: {initial_decision}")
-    
     if request.method == 'POST':
-        final_decision = request.form.get('final_decision')
-        print(f"POST received - Final Decision: {final_decision}")
-        if final_decision not in ['high risk', 'low risk']:
-            print(f"Invalid final_decision, defaulting to {initial_decision}")
-            final_decision = initial_decision or 'Not Set'
-        session['current_final_decision'] = final_decision
-        print("Redirecting to stage3")
-        return redirect(url_for('stage3'))
+        if condition == 1:
+            final_risk_score = request.form.get('final_risk_score')
+            try:
+                final_risk_score = int(final_risk_score)
+                if final_risk_score < 1 or final_risk_score > 10:
+                    raise ValueError
+            except (ValueError, TypeError):
+                return "Invalid final risk score. Please enter a number between 1 and 10.", 400
+            session['current_final_risk_score'] = final_risk_score
+            session['current_final_decision'] = 'accept' if final_risk_score < 6 else 'reject'
+            return redirect(url_for('stage3'))
+        else:
+            action = request.form.get('action')
+            if action == 'continue':
+                session['show_ai_prediction'] = True
+                return render_template('stage2_condition{}.html'.format(condition), 
+                                     predicted_risk_score=task_data['Risk Score'], 
+                                     initial_risk_score=initial_risk_score, 
+                                     initial_decision=initial_decision, 
+                                     show_ai_prediction=True,
+                                     graph_data=json.dumps(generate_chart(task_data)))
+            elif action == 'submit_final':
+                final_risk_score = request.form.get('final_risk_score')
+                try:
+                    final_risk_score = int(final_risk_score)
+                    if final_risk_score < 1 or final_risk_score > 10:
+                        raise ValueError
+                except (ValueError, TypeError):
+                    return "Invalid final risk score. Please enter a number between 1 and 10.", 400
+                session['current_final_risk_score'] = final_risk_score
+                session['current_final_decision'] = 'accept' if final_risk_score < 6 else 'reject'
+                return redirect(url_for('stage3'))
     
-    if 'condition' not in session or 'current_initial_decision' not in session:
-        print("Session missing condition or initial_decision on GET, redirecting to task")
+    if 'condition' not in session or 'current_initial_risk_score' not in session:
         return redirect(url_for('task'))
     
-    print("Rendering Stage 2 template")
+    def generate_chart(task_data):
+        if task_data['Uncertainty Type'].lower() == 'epistemic':
+            return epistemic_charts(task_data['Level'])
+        else:
+            return aleatoric_charts(task_data['Level'], task_data['Risk Score'])
+    
     if condition == 1:
-        return render_template('stage2_condition1.html', predicted=task_data['Predicted'], initial_decision=initial_decision)
-    elif condition == 2:
-        return render_template('stage2_condition2.html', predicted=task_data['Predicted'], confidence_score=task_data['Confidence_Score'], initial_decision=initial_decision)
-    elif condition == 3:
-        level_map = {1: "0.5-0.6", 2: "0.6-0.7", 3: "0.7-0.8", 4: "0.8-0.9", 5: "0.9-1.0"}
-        graph_url = GRAPH_URLS["condition3"][level_map[task_data['Level']]]
-        return render_template('stage2_condition3.html', predicted=task_data['Predicted'], confidence_score=task_data['Confidence_Score'], graph_url=graph_url, initial_decision=initial_decision)
-    elif condition == 4:
-        level_map = {1: "0.5-0.6", 2: "0.6-0.7", 3: "0.7-0.8", 4: "0.8-0.9", 5: "0.9-1.0"}
-        predicted_lower = task_data['Predicted'].lower()
-        outcome = "default" if "high" in predicted_lower else "non-default"
-        key = f"{level_map[task_data['Level']]}-{outcome}"
-        graph_key = level_map[task_data['Level']] if task_data['Level'] == 1 else key
-        graph_url = GRAPH_URLS["condition4"][graph_key]
-        return render_template('stage2_condition4.html', predicted=task_data['Predicted'], confidence_score=task_data['Confidence_Score'], graph_url=graph_url, initial_decision=initial_decision)
-       
+        return render_template('stage2_condition1.html', 
+                             predicted_risk_score=task_data['Risk Score'], 
+                             initial_risk_score=initial_risk_score, 
+                             initial_decision=initial_decision)
+    else:
+        return render_template('stage2_condition{}.html'.format(condition), 
+                             predicted_risk_score=task_data['Risk Score'], 
+                             initial_risk_score=initial_risk_score, 
+                             initial_decision=initial_decision, 
+                             show_ai_prediction=False,
+                             graph_data=json.dumps(generate_chart(task_data)))
 
 @app.route('/stage3', methods=['GET', 'POST'])
 def stage3():
-    task_index = session['task_index']
+    task_index = session.get('task_index', 0)
     task_data = session['tasks'][task_index]
-    initial_decision = session.get('current_initial_decision', 'Not Set')
-    final_decision = session.get('current_final_decision', 'Not Set')
-    
-    # Get actual risk and AI prediction
-    actual_risk = "High Risk" if task_data['Creditability'] == 1 else "Low Risk"
-    ai_prediction = task_data['Predicted']
+    initial_risk_score = session.get('current_initial_risk_score')
+    initial_decision = session.get('current_initial_decision')
+    final_risk_score = session.get('current_final_risk_score')
+    final_decision = session.get('current_final_decision')
     
     if request.method == 'POST':
         session['responses'].append({
             'ID': task_data['ID'],
             'Task_Number': task_index + 1,
             'Condition': session['condition'],
-            'Initial_Decision': initial_decision,
-            'Final_Decision': final_decision,
-            'Predicted': task_data['Predicted'],
-            'Confidence_Score': task_data['Confidence_Score'],
-            'Level': task_data['Level']
+            'Initial_Risk_Score': initial_risk_score,
+            'Final_Risk_Score': final_risk_score,
+            'Predicted_Risk_Score': task_data['Risk Score'],
+            'Uncertainty_Level': task_data['Level'],
+            'Uncertainty_Type': task_data['Uncertainty Type'],
+            'Actual_Risk': 'high' if task_data['Creditability'] == 1 else 'low'
         })
         session['task_index'] += 1
         return redirect(url_for('task'))
     
-    customer_number = task_index + 1
-    return render_template('stage3.html', 
-                          customer_number=customer_number,
-                          initial_decision=initial_decision,
-                          final_decision=final_decision,
-                          ai_prediction=ai_prediction,
-                          actual_risk=actual_risk)
+    return render_template('stage3.html',
+                         customer_number=task_index + 1,
+                         initial_decision=initial_decision,
+                         final_decision=final_decision,
+                         ai_prediction='accept' if task_data['Risk Score'] < 6 else 'reject',
+                         actual_risk='high' if task_data['Creditability'] == 1 else 'low')
 
 @app.route('/test-db')
 def test_db():
@@ -266,6 +359,4 @@ def test_db():
         db_pool.putconn(conn)
 
 if __name__ == '__main__':
-    #app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5001)), debug=True)
-    #app.run(debug=True)
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
