@@ -7,9 +7,10 @@ from psycopg2 import pool
 import uuid
 import json
 import random
+import time
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', '1234')
+app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key')
 
 # Neon connection pool
 db_pool = psycopg2.pool.SimpleConnectionPool(
@@ -194,19 +195,19 @@ def task():
             conn = db_pool.getconn()
             try:
                 with conn.cursor() as cur:
-                    for response in session['responses']:
-                        task_data = next(t for t in session['tasks'] if t['ID'] == response['ID'])
-                        revolving_util = float(str(task_data['RevolvingUtilizationOfUnsecuredLines']).replace('%', '')) / 100 if '%' in str(task_data['RevolvingUtilizationOfUnsecuredLines']) else float(task_data['RevolvingUtilizationOfUnsecuredLines'])
+                    for response in session.get('responses', []):
+                        task_data = next(t for t in session['tasks'] if t['ID'] == response['task_id'])
+                        revolving_util = float(str(task_data['RevolvingUtilizationOfUnsecuredLines']).replace('%', '')) / 100 if '%' in str(task_data['RevolvingUtilizationOfUnsecuredLines']) else float(str(task_data['RevolvingUtilizationOfUnsecuredLines'])
                         late_payments = int(task_data['NumberOfTime30-59DaysPastDueNotWorse'])
-                        debt_ratio = float(str(task_data['DebtRatio']).replace('%', '')) / 100 if '%' in str(task_data['DebtRatio']) else float(task_data['DebtRatio'])
-                        monthly_income = float(str(task_data['MonthlyIncome']).replace('$', '').replace(',', '')) if any(c in str(task_data['MonthlyIncome']) for c in ['$', ',']) else float(task_data['MonthlyIncome'])
+                        debt_ratio = float(str(task_data['DebtRatio']).replace('%', '')) / 100 if '%' in str(task_data['DebtRatio']) else float(str(task_data['DebtRatio'])
+                        monthly_income = float(str(task_data['MonthlyIncome']).replace('$', '').replace(',', '')) if any(c in str(task_data['MonthlyIncome']) for c in ['$', ',']) else float(str(task_data['MonthlyIncome'])
                         cur.execute(
                             "INSERT INTO responses (participant_id, task_number, condition, initial_risk_score, final_risk_score, predicted_risk_score, uncertainty_level, uncertainty_type, actual_risk, "
                             "revolving_utilization, late_payments_30_59, debt_ratio, monthly_income) "
                             "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
-                            (session['participant_id'], response['Task_Number'], response['Condition'], response['Initial_Risk_Score'], 
-                             response['Final_Risk_Score'], response['Predicted_Risk_Score'], response['Uncertainty_Level'], 
-                             response['Uncertainty_Type'], response['Actual_Risk'], revolving_util, late_payments, debt_ratio, monthly_income)
+                            (session['participant_id'], response['task_number'], response['condition'], response['initial_risk_score'], 
+                             response['final_risk_score'], response['predicted_risk_score'], response['uncertainty_level'], 
+                             response['uncertainty_type'], response['actual_risk'], revolving_util, late_payments, debt_ratio, monthly_income)
                         )
                     conn.commit()
                 break
@@ -274,7 +275,7 @@ def stage2():
             action = request.form.get('action')
             if action == 'continue':
                 session['show_ai_prediction'] = True
-                return render_template('stage2_condition{}.html'.format(condition), 
+                return render_template(f'stage2_condition{condition}.html', 
                                      predicted_risk_score=task_data['Risk Score'], 
                                      initial_risk_score=initial_risk_score, 
                                      initial_decision=initial_decision, 
@@ -293,7 +294,7 @@ def stage2():
                 return redirect(url_for('stage3'))
     
     if 'condition' not in session or 'current_initial_risk_score' not in session:
-        return redirect(url_for('task'))
+        return redirect(url_for('index'))
     
     def generate_chart(task_data):
         if task_data['Uncertainty Type'].lower() == 'epistemic':
@@ -307,7 +308,7 @@ def stage2():
                              initial_risk_score=initial_risk_score, 
                              initial_decision=initial_decision)
     else:
-        return render_template('stage2_condition{}.html'.format(condition), 
+        return render_template(f'stage2_condition{condition}.html', 
                              predicted_risk_score=task_data['Risk Score'], 
                              initial_risk_score=initial_risk_score, 
                              initial_decision=initial_decision, 

@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stage 2 - No Uncertainty Information</title>
+    <title>Stage 2 - Credit Risk Assessment (No Uncertainty)</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; }
         .container { max-width: 600px; margin: auto; }
         .form-group { margin-bottom: 20px; }
-        .form-group label { display: block; margin-bottom: 5px; }
+        .form-group label { display: block; margin-bottom: 10px; }
         .form-group input { width: 100px; padding: 5px; }
         button { padding: 10px 20px; background-color: #4CAF50; color: white; border: none; cursor: pointer; }
         button:hover { background-color: #45a049; }
@@ -18,23 +18,22 @@
             var score = parseInt(document.getElementById('final_risk_score').value);
             if (score >= 1 && score <= 10) {
                 var decision = score < 6 ? 'accepted' : 'rejected';
-                alert('You have ' + decision + ' this customer.');
+                alert('Decision: You have ' + decision + ' this customer.');
                 return true;
-            } else {
-                alert('Please enter a valid risk score between 1 and 10.');
-                return false;
             }
+            alert('Please enter a valid risk score between 1 and 10.');
+            return false;
         }
     </script>
 </head>
 <body>
     <div class="container">
-        <h2>Stage 2 - Customer Risk Assessment (No Uncertainty)</h2>
+        <h2>Stage 2 - Risk Assessment (No Uncertainty Information)</h2>
         <p>Your initial risk score: {{ initial_risk_score }} ({{ initial_decision }})</p>
-        <p>The AI's predicted risk for this customer is {{ predicted_risk_score }} and will be rated as {{ 'accepted' if predicted_risk_score < 6 else 'rejected' }}.</p>
+        <p>AI Risk Score: {{ predicted_risk_score }} (Decision: {{ 'accept' if predicted_risk_score < 6 else 'reject' }})</p>
         <form method="POST" action="{{ url_for('stage2') }}" onsubmit="return validateFinalScore()">
             <div class="form-group">
-                <label for="final_risk_score">What is your final risk score for this customer (1-10, 10 is riskiest):</label>
+                <label for="final_risk_score">Enter your final risk score (1-10, 10 is riskiest):</label>
                 <input type="number" id="final_risk_score" name="final_risk_score" min="1" max="10" required>
             </div>
             <button type="submit">Submit Final Score</button>
